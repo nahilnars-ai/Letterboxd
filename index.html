@@ -21,25 +21,23 @@
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      padding: 15px;
+      padding: 20px 10px;
     }
 
     .main-wrapper {
       display: flex;
       flex-direction: row;
-      align-items: stretch;
       justify-content: center;
       gap: 20px;
       width: 100%;
-      max-width: 780px;
-      height: 88vh;
-      min-height: 620px;
-      max-height: 850px;
+      max-width: 760px;
+      height: 720px;
     }
 
     /* Panneau Leaderboard */
     .leaderboard-panel {
       width: 260px;
+      height: 100%;
       background: #181f25;
       border-radius: 18px;
       border: 2px solid #2c3440;
@@ -72,7 +70,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 10px;
+      padding: 8px 10px;
       background: rgba(44, 52, 64, 0.4);
       border-radius: 8px;
       font-size: 0.8rem;
@@ -112,6 +110,7 @@
     .game-container {
       width: 100%;
       max-width: 400px;
+      height: 100%;
       background: #181f25;
       display: flex;
       flex-direction: column;
@@ -127,7 +126,7 @@
       top: 0;
       left: 0;
       width: 100%;
-      height: 4px;
+      height: 5px;
       background: rgba(255, 255, 255, 0.1);
       z-index: 15;
     }
@@ -176,7 +175,7 @@
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      background-color: #242c35;
+      background-color: #202830;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
@@ -303,4 +302,325 @@
 
     .final-score {
       font-size: 1rem;
-      margin-bottom: 15
+      margin-bottom: 15px;
+      color: #9ab;
+    }
+
+    .final-score b {
+      color: #00e054;
+      font-size: 2rem;
+      display: block;
+      margin-top: 4px;
+    }
+
+    .name-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 240px;
+      margin-bottom: 12px;
+    }
+
+    .name-input {
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid #2c3440;
+      background: #14181c;
+      color: #fff;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .btn-submit-score {
+      background: #00e054;
+      color: #000;
+      padding: 10px;
+    }
+
+    .btn-restart {
+      background: #40bcf4;
+      color: #000;
+      padding: 10px 24px;
+    }
+
+    @media (max-width: 768px) {
+      .main-wrapper {
+        flex-direction: column-reverse;
+        height: auto;
+      }
+      .leaderboard-panel {
+        width: 100%;
+        max-width: 400px;
+        height: 200px;
+      }
+      .game-container {
+        height: 600px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-wrapper">
+    <div class="leaderboard-panel">
+      <div class="leaderboard-title">🏆 Top 10 Records</div>
+      <ul class="leaderboard-list" id="leaderboardList"></ul>
+    </div>
+
+    <div class="game-container">
+      <div class="timer-bar-container">
+        <div class="timer-bar" id="timerBar"></div>
+      </div>
+
+      <div class="header">
+        <span class="timer-badge">⏱️ <span id="timerText">30</span>s</span>
+        <span class="streak-badge">Score : <span id="score">0</span></span>
+      </div>
+
+      <div class="card" id="card-top">
+        <div class="overlay"></div>
+        <div class="card-content">
+          <div class="title" id="title-top">Inception</div>
+          <div class="year" id="year-top">2010</div>
+          <div class="rating-box">
+            ★ <span id="rating-top">4.4</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="vs-divider">VS</div>
+
+      <div class="card" id="card-bottom">
+        <div class="overlay"></div>
+        <div class="card-content">
+          <div class="title" id="title-bottom">Parasite</div>
+          <div class="year" id="year-bottom">2019</div>
+          
+          <div class="actions" id="actions">
+            <button class="btn btn-higher" onclick="makeGuess('higher')">▲ PLUS HAUT</button>
+            <button class="btn btn-lower" onclick="makeGuess('lower')">▼ PLUS BAS</button>
+          </div>
+
+          <div class="rating-box" id="rating-bottom-box" style="display: none;">
+            ★ <span id="rating-bottom">?.?</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="game-over-screen" id="gameOverScreen">
+        <h2>PERDU !</h2>
+        <div class="game-over-reason" id="gameOverReason">Mauvaise réponse</div>
+        <p class="final-score">Score final : <b id="finalScoreText">0</b></p>
+        
+        <div class="name-input-group" id="saveScoreForm">
+          <input type="text" id="playerName" class="name-input" placeholder="Ton pseudo / Prénom" maxlength="15">
+          <button class="btn btn-submit-score" onclick="savePlayerScore()">Enregistrer</button>
+        </div>
+
+        <button class="btn btn-restart" id="btnRestart" onclick="restartGame()">Rejouer</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TMDB_API_KEY = "12167271b4a50458357335b8a53e2e5a";
+    const IMG_BASE_URL = "https://image.tmdb.org/t/p/w780";
+    const ROUND_TIME = 30;
+
+    const fallbackMovies = [
+      { title: "Inception", year: "2010", rating: 4.4, img: "https://image.tmdb.org/t/p/w780/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg" },
+      { title: "Parasite", year: "2019", rating: 4.5, img: "https://image.tmdb.org/t/p/w780/hiKmpZMGZsrkA3cdce8a7Dpos1j.jpg" },
+      { title: "Interstellar", year: "2014", rating: 4.4, img: "https://image.tmdb.org/t/p/w780/xJHokMbljvjADYdit5fK5VQsXEG.jpg" },
+      { title: "Pulp Fiction", year: "1994", rating: 4.3, img: "https://image.tmdb.org/t/p/w780/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg" },
+      { title: "Fight Club", year: "1999", rating: 4.3, img: "https://image.tmdb.org/t/p/w780/hZkgoQYus5vegHoetLkCJzb17zJ.jpg" },
+      { title: "Oppenheimer", year: "2023", rating: 4.2, img: "https://image.tmdb.org/t/p/w780/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg" }
+    ];
+
+    let moviePool = [];
+    let currentScore = 0;
+    let movieTop = null;
+    let movieBottom = null;
+    let isProcessing = false;
+    let currentPage = 1;
+    let timeLeft = ROUND_TIME;
+    let timerInterval = null;
+
+    function getLeaderboard() {
+      const stored = localStorage.getItem('cine_duel_leaderboard');
+      if (stored) return JSON.parse(stored);
+      return [
+        { name: "Cinéphile99", score: 14 },
+        { name: "LetterboxdKing", score: 11 },
+        { name: "PopcornFan", score: 8 },
+        { name: "NolanStan", score: 6 },
+        { name: "CinéAddict", score: 4 }
+      ];
+    }
+
+    function renderLeaderboard() {
+      const list = document.getElementById('leaderboardList');
+      const leaderboard = getLeaderboard();
+      list.innerHTML = '';
+
+      leaderboard.slice(0, 10).forEach((item, index) => {
+        const li = document.createElement('li');
+        li.className = `leaderboard-item top-${index + 1}`;
+        li.innerHTML = `
+          <div class="rank-name">
+            <span class="rank-num">#${index + 1}</span>
+            <span>${item.name}</span>
+          </div>
+          <span class="score-badge-lb">${item.score} pts</span>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function savePlayerScore() {
+      const nameInput = document.getElementById('playerName');
+      const name = nameInput.value.trim() || "Anonyme";
+      const leaderboard = getLeaderboard();
+
+      leaderboard.push({ name: name, score: currentScore });
+      leaderboard.sort((a, b) => b.score - a.score);
+
+      localStorage.setItem('cine_duel_leaderboard', JSON.stringify(leaderboard.slice(0, 10)));
+      renderLeaderboard();
+
+      document.getElementById('saveScoreForm').style.display = 'none';
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timeLeft = ROUND_TIME;
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          handleTimeOut();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      document.getElementById('timerText').innerText = timeLeft;
+      const percentage = (timeLeft / ROUND_TIME) * 100;
+      document.getElementById('timerBar').style.width = `${percentage}%`;
+    }
+
+    function handleTimeOut() {
+      if (isProcessing) return;
+      isProcessing = true;
+      document.getElementById('actions').style.display = 'none';
+      document.getElementById('gameOverReason').innerText = "⏱️ Temps écoulé (30s max !)";
+      document.getElementById('finalScoreText').innerText = currentScore;
+      document.getElementById('saveScoreForm').style.display = currentScore > 0 ? 'flex' : 'none';
+      document.getElementById('gameOverScreen').style.display = 'flex';
+    }
+
+    async function fetchMovies(page = 1) {
+      try {
+        const url = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=fr-FR&sort_by=popularity.desc&include_adult=false&vote_count.gte=100&page=${page}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) return [];
+
+        return data.results
+          .filter(m => (m.backdrop_path || m.poster_path))
+          .map(m => ({
+            title: m.title || m.original_title,
+            year: m.release_date ? m.release_date.split('-')[0] : '',
+            rating: parseFloat((m.vote_average / 2).toFixed(1)),
+            img: `${IMG_BASE_URL}${m.backdrop_path || m.poster_path}`
+          }));
+      } catch (err) {
+        return [...fallbackMovies];
+      }
+    }
+
+    function updateUI() {
+      document.getElementById('score').innerText = currentScore;
+      
+      const cardTop = document.getElementById('card-top');
+      if (movieTop.img) cardTop.style.backgroundImage = `url('${movieTop.img}')`;
+      document.getElementById('title-top').innerText = movieTop.title;
+      document.getElementById('year-top').innerText = movieTop.year;
+      document.getElementById('rating-top').innerText = movieTop.rating.toFixed(1);
+
+      const cardBottom = document.getElementById('card-bottom');
+      if (movieBottom.img) cardBottom.style.backgroundImage = `url('${movieBottom.img}')`;
+      document.getElementById('title-bottom').innerText = movieBottom.title;
+      document.getElementById('year-bottom').innerText = movieBottom.year;
+      
+      document.getElementById('actions').style.display = 'flex';
+      document.getElementById('rating-bottom-box').style.display = 'none';
+      document.getElementById('gameOverScreen').style.display = 'none';
+      isProcessing = false;
+      startTimer();
+    }
+
+    async function initGame() {
+      renderLeaderboard();
+      moviePool = [...fallbackMovies].sort(() => Math.random() - 0.5);
+      movieTop = moviePool.pop();
+      movieBottom = moviePool.pop();
+      currentScore = 0;
+      updateUI();
+
+      currentPage = Math.floor(Math.random() * 5) + 1;
+      const onlineMovies = await fetchMovies(currentPage);
+      if (onlineMovies.length > 0) {
+        moviePool = [...onlineMovies].sort(() => Math.random() - 0.5);
+      }
+    }
+
+    async function makeGuess(choice) {
+      if (isProcessing) return;
+      isProcessing = true;
+      clearInterval(timerInterval);
+
+      const isHigher = movieBottom.rating >= movieTop.rating;
+      const won = (choice === 'higher' && isHigher) || (choice === 'lower' && !isHigher);
+
+      document.getElementById('actions').style.display = 'none';
+      document.getElementById('rating-bottom').innerText = movieBottom.rating.toFixed(1);
+      document.getElementById('rating-bottom-box').style.display = 'flex';
+
+      setTimeout(async () => {
+        if (won) {
+          currentScore++;
+          movieTop = movieBottom;
+
+          if (moviePool.length < 2) {
+            currentPage++;
+            const newMovies = await fetchMovies(currentPage);
+            moviePool = [...moviePool, ...newMovies].sort(() => Math.random() - 0.5);
+          }
+
+          movieBottom = moviePool.pop() || fallbackMovies[Math.floor(Math.random() * fallbackMovies.length)];
+          updateUI();
+        } else {
+          document.getElementById('gameOverReason').innerText = "Mauvaise réponse !";
+          document.getElementById('finalScoreText').innerText = currentScore;
+          document.getElementById('saveScoreForm').style.display = currentScore > 0 ? 'flex' : 'none';
+          document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+      }, 1100);
+    }
+
+    function restartGame() {
+      initGame();
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
